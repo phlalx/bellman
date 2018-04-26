@@ -2,15 +2,15 @@
 
 ## Nodes
 
-The distributed system is modelled by a set of `Node.t`, identified
-globally by their `Global_id.t`. Nodes communicate with their neighbors 
-using a *local link* identified by a `Local_id.t` according to a user-defined
-topology.
+The distributed system is modeled by a set of `Node.t`, identified
+globally by a `Global_id.t`. Nodes communicate with their neighbors 
+using a *local link* identified by a `Local_id.t` 
+according to a user-defined topology.
 
 ![alt text](fig/topology.png)
 
-A user of the simulator must implement the `Node` interface which defines the
-behavior of the distributed algorithm.
+The simulated algorithm is defined in the `Node` and `Message` modules. 
+The other modules are used by the *simulator/scheduler*.
 
 ```
 val create : num_nodes:int -> Global_id.t -> num_neighbors:int ->
@@ -20,16 +20,19 @@ val execute : t -> Levent.t -> unit
 ```
 
 Upon creation, a node is provided with the total number of nodes on the network,
-its global identifier, the number of its neighbors, and a send function that 
+its global identifier, the number of its neighbors, and a `send` function that 
 it uses to asynchronously send messages to its neighbors.
 
-A node must also implement a function  `execute` which is called by the 
-*scheduler* when a *local event* is delivered.
+A node must also implement a function `execute` which is called by the 
+scheduler when a *local event* is delivered.
 
-Local events are of two types. Meta events are controling events that are used
-by the simulator to act on the nodes (Currently, only `start` but it could be extended to model failure simulation or  topology change...). Message events
-pertain to the algorithm being simulated. Eventually, messages are delivered 
-over a local link which is known to the receiving node. 
+Local events are of two types. 
+* `Meta` events are controling events that are used 
+by the simulator to act on the nodes (Currently, only `start` but it could be
+extended to model failure or topology change...). 
+* `Protocol` messages. Eventually, messages are delivered over a local link 
+   which is known to the receiving node. 
+
 ```
 type t = 
   | Meta of Mevent.t
@@ -48,10 +51,12 @@ val start_all_nodes : t -> unit
 val schedule : t -> bool
 ```
 
-The scheduler is initialized with the network topology. It simulates concurrent execution of processes over a reliable network with no ordering guarantees.
-To do so, it maintains a priority queue of *global events* (`Gevent.t`),
-ordered by delivery time.  Global events are local events with a delivery time and destination node. The scheduler keeps track of a *simulated time*
- such that:
+The scheduler is initialized with the network topology. It simulates concurrent 
+execution of processes over a *reliable* network with *no ordering* guarantees.
+To do so, it maintains a priority queue of *global events* (`Gevent.t`), ordered 
+by delivery time.  Global events are essentially local events augmented with a 
+  delivery time and destination node. The scheduler keeps track of a 
+  *simulated time* such that:
  * Messages are delivered at a random time within less than a second after emission,
  * Nodes execute instantaneously.
 
@@ -66,8 +71,13 @@ let () =
 
 ## Asynchronous Bellman-ford
 
-The current `Node` and `Message` modules define a distributed version of 
-the bellman-ford algorithm (see Lynch's Distributed Algorithms p507). 
+The current `Node` and `Message` modules define an asynchronous message-passing 
+version of the bellman-ford algorithm (see Lynch's Distributed Algorithms p507). 
+
+Each node independently propagates its id through the network. This allows
+the receiving nodes to update their routes to the initiating node. The process
+eventually converges to a state where each nodes have a routing table telling
+them which neighbor to contact to reach any given global id.
 
 # Usage
 
