@@ -1,0 +1,2 @@
+true: package(core,async,ppx_jane)
+true: thread,debug
