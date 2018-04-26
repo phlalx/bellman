@@ -64,15 +64,10 @@ let () =
   while Scheduler.schedule sc do () done
 ```
 
-## Bellman-ford
+## Asynchronous Bellman-ford
 
 The current `Node` and `Message` modules define a distributed version of 
-the bellman-ford algorithm. Nodes send each other their *routing table* 
-until a fixpoint is reached. Initially, a node only knows the route to itself.
-Whenever a new route is known from its neighbors, it updates its table and
-broadcasts it to its neighbors. This is guaranteed to converge such that
-all local routing tables will define the short path from all pairs of nodes
-in the network.
+the bellman-ford algorithm (see Lynch's Distributed Algorithms p507). 
 
 # Usage
 
@@ -90,23 +85,37 @@ Topology:
 3 -> 0-0, 1-1
 ---
 3 <- *: Start
-3 -> 0: [routing = [0: dist 4611686018427387903, route *; 1: dist 4611686018427387903, route *; 2: dist 4611686018427387903, route *; 3: dist 0, route *]]
-3 -> 1: [routing = [0: dist 4611686018427387903, route *; 1: dist 4611686018427387903, route *; 2: dist 4611686018427387903, route *; 3: dist 0, route *]]
+3 -> 0: [id = 3 dist = 0]
+3 -> 1: [id = 3 dist = 0]
 2 <- *: Start
-2 -> 1: [routing = [0: dist 4611686018427387903, route *; 1: dist 4611686018427387903, route *; 2: dist 0, route *; 3: dist 4611686018427387903, route *]]
-....
+2 -> 1: [id = 2 dist = 0]
+1 <- *: Start
+1 -> 0: [id = 1 dist = 0]
+1 -> 2: [id = 1 dist = 0]
+1 -> 3: [id = 1 dist = 0]
+0 <- *: Start
+0 -> 1: [id = 0 dist = 0]
+0 -> 3: [id = 0 dist = 0]
+2 <- 1: [id = 1 dist = 0]
+2: routes [0: dist 4611686018427387903, route *; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 4611686018427387903, route *]
+3 <- 0: [id = 0 dist = 0]
+...
 
-> ./main.byte | grep updated
-2: routing table updated -> [0: dist 4611686018427387903, route *; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 4611686018427387903, route *]
-1: routing table updated -> [0: dist 4611686018427387903, route *; 1: dist 0, route *; 2: dist 1, route 1; 3: dist 4611686018427387903, route *]
-3: routing table updated -> [0: dist 1, route 0; 1: dist 4611686018427387903, route *; 2: dist 4611686018427387903, route *; 3: dist 0, route *]
-3: routing table updated -> [0: dist 1, route 0; 1: dist 1, route 1; 2: dist 2, route 1; 3: dist 0, route *]
-1: routing table updated -> [0: dist 2, route 2; 1: dist 0, route *; 2: dist 1, route 1; 3: dist 1, route 2]
-2: routing table updated -> [0: dist 3, route 0; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 2, route 0]
-1: routing table updated -> [0: dist 1, route 0; 1: dist 0, route *; 2: dist 1, route 1; 3: dist 1, route 2]
-0: routing table updated -> [0: dist 0, route *; 1: dist 2, route 1; 2: dist 3, route 1; 3: dist 1, route 1]
-0: routing table updated -> [0: dist 0, route *; 1: dist 1, route 0; 2: dist 2, route 0; 3: dist 1, route 1]
-2: routing table updated -> [0: dist 2, route 0; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 2, route 0]
+> ./main.byte | grep routes
+2: routes [0: dist 4611686018427387903, route *; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 4611686018427387903, route *]
+3: routes [0: dist 1, route 0; 1: dist 4611686018427387903, route *; 2: dist 4611686018427387903, route *; 3: dist 0, route *]
+1: routes [0: dist 2, route 2; 1: dist 0, route *; 2: dist 4611686018427387903, route *; 3: dist 4611686018427387903, route *]
+3: routes [0: dist 1, route 0; 1: dist 1, route 1; 2: dist 4611686018427387903, route *; 3: dist 0, route *]
+2: routes [0: dist 3, route 0; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 4611686018427387903, route *]
+1: routes [0: dist 1, route 0; 1: dist 0, route *; 2: dist 4611686018427387903, route *; 3: dist 4611686018427387903, route *]
+0: routes [0: dist 0, route *; 1: dist 4611686018427387903, route *; 2: dist 4611686018427387903, route *; 3: dist 1, route 1]
+0: routes [0: dist 0, route *; 1: dist 1, route 0; 2: dist 4611686018427387903, route *; 3: dist 1, route 1]
+1: routes [0: dist 1, route 0; 1: dist 0, route *; 2: dist 1, route 1; 3: dist 4611686018427387903, route *]
+1: routes [0: dist 1, route 0; 1: dist 0, route *; 2: dist 1, route 1; 3: dist 1, route 2]
+3: routes [0: dist 1, route 0; 1: dist 1, route 1; 2: dist 2, route 1; 3: dist 0, route *]
+0: routes [0: dist 0, route *; 1: dist 1, route 0; 2: dist 2, route 0; 3: dist 1, route 1]
+2: routes [0: dist 2, route 0; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 4611686018427387903, route *]
+2: routes [0: dist 2, route 0; 1: dist 1, route 0; 2: dist 0, route *; 3: dist 2, route 0]
 ```
 
-When this is run in terminal, global id should appear in read, and local id in green.
+When this is run in terminal, global ids should appear in red, and local ids in green.

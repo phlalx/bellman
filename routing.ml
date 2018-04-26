@@ -10,17 +10,6 @@ let create ~num_nodes gid =
   res.(gid).dist <- 0;
   res
 
-let update t lid t' = 
-  let changed = ref false in
-  for i = 0 to Array.length t - 1 do
-    if t'.(i).dist < t.(i).dist - 1 then ( (* careful not incr Int.max_value *)
-      t.(i).dist <- t'.(i).dist + 1;
-      t.(i).route <- lid;
-      changed := true
-    );
-  done;
-  !changed
-
 let elt_to_string i {dist; route} = 
   Printf.sprintf !"%{Global_id}: dist %d, route %{Local_id}" i dist route
 

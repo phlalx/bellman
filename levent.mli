@@ -1,5 +1,4 @@
 
-
 (* Local events are events processed by nodes.
 
    local events can be either:

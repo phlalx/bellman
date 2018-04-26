@@ -1,7 +1,6 @@
-(* This node behavior is very simple. It starts by broadcasting its routing
-   table to direct neighbors, and continuously wait for routing tables from
-   its neighbors. Whenever its table is *improved* by an incoming message,
-   it rebroadcasts it. *)
+(* Message-passing version of Bellman-ford algorithm. Each node 
+   independently propagates its id through the network, allowing the 
+   receiving nodes to update their routes to the initiating node *)
 
 open Core
 
@@ -12,29 +11,27 @@ type t = {
   routing : Routing.t
 }
 
-let broadcast t m =
+(* broadcast to all neighbors except lid *)
+let broadcast_all_but t m lid =
   for i = 0 to t.num_neighbors - 1 do
-    t.send (m, i) 
+    if not (i = lid) then
+      t.send (m, i) 
   done
+
+let broadcast t m = broadcast_all_but t m Local_id.dummy
 
 let create ~num_nodes global_id ~num_neighbors ~send = 
   let routing = Routing.create num_nodes global_id in
   { global_id; num_neighbors; send; routing }
 
-let broadcast_routing t =
-    broadcast t Message.{routing = t.routing}  
-
-let execute_meta t =
-  function
-  | Mevent.Start -> broadcast_routing t
-
-let execute_msg t msg lid = 
-  if Routing.update t.routing lid msg.Message.routing then (
-    Printf.printf !"%{Global_id}: routing table updated -> [%{Routing}]\n" t.global_id t.routing;
-    broadcast_routing t 
-  ) 
-
 let execute t =
   function
-  | Levent.Meta meta -> execute_meta t meta
-  | Levent.Protocol (m, lid) -> execute_msg t m lid
+  | Levent.Meta Mevent.Start -> broadcast t Message.{ id = t.global_id; dist = 0 }
+  | Levent.Protocol ({Message.id; Message.dist}, lid) -> 
+    let open Routing in
+    if dist < t.routing.(id).dist - 1 then ( (* careful of int overflow *)
+       t.routing.(id).dist <- dist + 1;
+       t.routing.(id).route <- lid;
+       broadcast_all_but t Message.{id; dist = dist + 1} lid;
+       Printf.printf !"%{Global_id}: routes [%{Routing}]\n" t.global_id t.routing
+    ) 

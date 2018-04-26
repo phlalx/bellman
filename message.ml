@@ -6,7 +6,8 @@ open Core
    begin simulated. Here, a variant of Bellman-Ford *)
 
 type t = {
-  routing : Routing.t;
+  id : Global_id.t;
+  dist : int;
 }
 
-let to_string {routing} = Printf.sprintf !"[routing = [%{Routing}]]" routing
+let to_string {id; dist} = Printf.sprintf !"[id = %{Global_id} dist = %d]" id dist

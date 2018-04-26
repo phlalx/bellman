@@ -57,7 +57,7 @@ let schedule t =
      Node.execute node_dst gevent.Gevent.levent;
      true
 
-(* generate a meta even start for all nodes *)
+(* generate a meta event 'start' for all nodes *)
 let start_all_nodes t =
   let n = Array.length t.nodes in
   for i = 0 to n - 1 do
