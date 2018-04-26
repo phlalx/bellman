@@ -1,3 +1,6 @@
+(* Generic id type, for global and local addressing. In the current
+   implementation, ids must be posivitet integer as they are used as
+   array indices. *)
 open Core
 
 module type ID = sig

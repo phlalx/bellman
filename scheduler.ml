@@ -4,36 +4,10 @@ type t = {
   nodes : Node.t Array.t;
   adjacency : Global_id.t Array.t Array.t;
   outgoing_events : Gevent.t Heap.t;
-  time : float ref  (* time of last delivered message *)
+  (* time of last delivered message, we use a ref instead of "mutable"
+     because it'll be slightly more convenient in [send_aux]. See below. *)
+  time : float ref 
 }
-
-let start_all_nodes t =
-  let n = Array.length t.nodes in
-  for i = 0 to n - 1 do
-    Heap.add t.outgoing_events 
-    Gevent.{ src = Global_id.dummy; dst = i; levent = Levent.Meta Mevent.Start;
-             delivery_time = 0. }
-  done
-
-let local_message_to_global_event time adjacency src (msg, lid) = 
-  let dst = adjacency.(src).(lid) in
-  let lid_dest, _ = Array.findi_exn adjacency.(dst) ~f:(fun _ x -> x = src) in (* TODO *)
-  let levent = Levent.Protocol (msg, lid_dest) in  
-  let delivery_time = !time +. (Random.float 1.0) in
-  Gevent.{ src; dst; levent; delivery_time } 
-
-let send_aux time adjacency outgoing_events src lmsg = 
-  let global_event = local_message_to_global_event time adjacency src lmsg in
-  Gevent.to_string global_event `Send |> print_string;
-  Heap.add outgoing_events global_event
-
-let edges_to_adjacency num_nodes edges =
-  let neighbors i = 
-    let f (x, y) = if x = i then Some y else if y = i then Some x else None in
-    let l_neighbors = List.filter_map edges ~f in
-    Array.of_list l_neighbors
-  in
-  Array.init num_nodes ~f:neighbors
 
 let print_graph adjacency =
   Printf.printf "Topology:\n";
@@ -45,8 +19,23 @@ let print_graph adjacency =
   Array.iteri adjacency ~f;
   Printf.printf "---\n"
 
-let create ~num_nodes ~edges =
-  let adjacency = edges_to_adjacency num_nodes edges in
+
+(* This is the [send] function we'll give to the nodes so they can communicate 
+   with their neighbors. It encapsulates the state we need for performing 
+   sending (topology, globlal event queue), but hides it from the node. *)
+let send_aux time adjacency outgoing_events src (msg, lid) = 
+  let dst = adjacency.(src).(lid) in 
+  (* lid_dest is the local id of the sender in the local address space of the 
+     receiver of the message. This could be done more efficiently if needed *)
+  let lid_dest, _ = Array.findi_exn adjacency.(dst) ~f:(fun _ x -> x = src) in
+  let levent = Levent.Protocol (msg, lid_dest) in  
+  let delivery_time = !time +. (Random.float 1.0) in
+  let global_event = Gevent.{ src; dst; levent; delivery_time } in
+  Gevent.to_string global_event `Send |> print_string;
+  Heap.add outgoing_events global_event
+
+let create ~adjacency =
+  let num_nodes = Array.length adjacency in
   print_graph adjacency;
   let outgoing_events = Heap.create ~cmp:Gevent.cmp () in
   let time = ref 0. in
@@ -67,3 +56,12 @@ let schedule t =
      t.time := gevent.Gevent.delivery_time;
      Node.execute node_dst gevent.Gevent.levent;
      true
+
+(* generate a meta even start for all nodes *)
+let start_all_nodes t =
+  let n = Array.length t.nodes in
+  for i = 0 to n - 1 do
+    Heap.add t.outgoing_events 
+    Gevent.{ src = Global_id.dummy; dst = i; levent = Levent.Meta Mevent.Start;
+             delivery_time = 0. }
+  done

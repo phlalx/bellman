@@ -1,7 +1,13 @@
 (* A node knows the total number of node in the system, as well as
-   its direct neighbors. Upon creation, it is provided with a 
-   [send] function that allows it to communicate to its neighbors
-   via a *local address*. *)
+   its direct neighbors. Upon creation, it is provided by the scheduler 
+   with a [send] function that allows it to communicate to its neighbors
+   via a *local address*.
+
+   When calling [send], "0 <= local_id < num_neighbors" must hold.
+   
+   A typical implementation of this interface will set up the local process
+   state in create, then [execute] reacts to local event by updating the
+   local state and sending one or several messages using [send]. *)
 
 type t
 

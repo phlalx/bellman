@@ -1,3 +1,8 @@
+(* This node behavior is very simple. It starts by broadcasting its routing
+   table to direct neighbors, and continuously wait for routing tables from
+   its neighbors. Whenever its table is *improved* by an incoming message,
+   it rebroadcasts it. *)
+
 open Core
 
 type t = { 

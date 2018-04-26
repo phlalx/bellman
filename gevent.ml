@@ -13,7 +13,8 @@ let to_string t d =
      | `Send -> (t.src, t.dst, "->")
      | `Receive -> (t.dst, t.src, "<-")
      in
-     Printf.sprintf !"%{Global_id} %s %{Global_id}: %{Levent}\n" src arrow dst t.levent
+     Printf.sprintf !"%{Global_id} %s %{Global_id}: %{Levent}\n" src arrow dst 
+                    t.levent
 
 let cmp t1 t2 = compare t1.delivery_time t2.delivery_time
 
