@@ -6,7 +6,6 @@ open Core
    begin simulated. Here, a variant of Bellman-Ford *)
 
 type t = {
-  (* id : Global_id.t; *)
   routing : Routing.t;
 }
 
